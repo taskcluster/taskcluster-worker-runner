@@ -11,7 +11,7 @@ require (
 	github.com/peterbourgon/mergemap v0.0.0-20130613134717-e21c03b7a721 // indirect
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/stretchr/testify v1.3.0
-	github.com/taskcluster/generic-worker v15.1.1+incompatible // indirect
+	github.com/taskcluster/generic-worker v15.1.2+incompatible // indirect
 	github.com/taskcluster/httpbackoff v1.0.0
 	github.com/taskcluster/jsonschema2go v1.0.0
 	github.com/taskcluster/slugid-go v1.1.0
