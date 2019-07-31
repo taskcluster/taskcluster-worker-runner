@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/Flaque/filet v0.0.0-20190209224823-fc4d33cfcf93
-	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
+	github.com/cenkalti/backoff v3.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/google/uuid v1.1.1 // indirect
