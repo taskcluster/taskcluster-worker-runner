@@ -3,14 +3,16 @@ package genericworker
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"strings"
 
+	"github.com/taskcluster/taskcluster-worker-runner/cfg"
 	"github.com/taskcluster/taskcluster-worker-runner/protocol"
-	"github.com/taskcluster/taskcluster-worker-runner/runner"
+	"github.com/taskcluster/taskcluster-worker-runner/run"
 	"github.com/taskcluster/taskcluster-worker-runner/worker/worker"
 )
 
@@ -20,12 +22,12 @@ type genericworkerConfig struct {
 }
 
 type genericworker struct {
-	runnercfg *runner.RunnerConfig
+	runnercfg *cfg.RunnerConfig
 	wicfg     genericworkerConfig
 	cmd       *exec.Cmd
 }
 
-func (d *genericworker) ConfigureRun(run *runner.Run) error {
+func (d *genericworker) ConfigureRun(state *run.State) error {
 	var err error
 
 	// copy some values from the provisioner metadata, if they are set; if not,
@@ -40,9 +42,9 @@ func (d *genericworker) ConfigureRun(run *runner.Run) error {
 		"instanceId":     "instance-id",
 		"region":         "region",
 	} {
-		v, ok := run.ProviderMetadata[md]
+		v, ok := state.ProviderMetadata[md]
 		if ok {
-			run.WorkerConfig, err = run.WorkerConfig.Set(cfg, v)
+			state.WorkerConfig, err = state.WorkerConfig.Set(cfg, v)
 			if err != nil {
 				return err
 			}
@@ -54,32 +56,36 @@ func (d *genericworker) ConfigureRun(run *runner.Run) error {
 	set := func(key, value string) {
 		var err error
 		// only programming errors can cause this to fail
-		run.WorkerConfig, err = run.WorkerConfig.Set(key, value)
+		state.WorkerConfig, err = state.WorkerConfig.Set(key, value)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	set("rootUrl", run.RootURL)
-	set("taskcluster.clientId", run.Credentials.ClientID)
-	set("taskcluster.accessToken", run.Credentials.AccessToken)
-	if run.Credentials.Certificate != "" {
-		set("taskcluster.certificate", run.Credentials.Certificate)
+	set("rootURL", state.RootURL)
+	set("clientId", state.Credentials.ClientID)
+	set("accessToken", state.Credentials.AccessToken)
+	if state.Credentials.Certificate != "" {
+		set("certificate", state.Credentials.Certificate)
 	}
 
-	set("workerId", run.WorkerID)
-	set("workerGroup", run.WorkerGroup)
+	set("workerId", state.WorkerID)
+	set("workerGroup", state.WorkerGroup)
 
-	workerPoolID := strings.SplitAfterN(run.WorkerPoolID, "/", 2)
+	workerPoolID := strings.SplitAfterN(state.WorkerPoolID, "/", 2)
 	set("provisionerId", workerPoolID[0][:len(workerPoolID[0])-1])
 	set("workerType", workerPoolID[1])
 
 	return nil
 }
 
-func (d *genericworker) StartWorker(run *runner.Run) (protocol.Transport, error) {
+func (d *genericworker) UseCachedRun(state *run.State) error {
+	return nil
+}
+
+func (d *genericworker) StartWorker(state *run.State) (protocol.Transport, error) {
 	// write out the config file
-	content, err := json.MarshalIndent(run.WorkerConfig, "", "  ")
+	content, err := json.MarshalIndent(state.WorkerConfig, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("Error constructing worker config: %v", err)
 	}
@@ -88,23 +94,39 @@ func (d *genericworker) StartWorker(run *runner.Run) (protocol.Transport, error)
 		return nil, fmt.Errorf("Error writing worker config to %s: %v", d.wicfg.ConfigPath, err)
 	}
 
-	// the --host taskcluster-worker-runner instructs generic-worker to merge
-	// config from $GENERIC_WORKER_CONFIG.
-	exe := fmt.Sprintf("%s/src/bin/worker.js", d.wicfg.Path)
-	cmd := exec.Command("node", exe, "--host", "taskcluster-worker-runner", "production")
+	transp := protocol.NewStdioTransport()
+
+	// path to generic-worker binary
+	cmd := exec.Command(d.wicfg.Path, "run", "--config", d.wicfg.ConfigPath)
 	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "GENERIC_WORKER_CONFIG="+d.wicfg.ConfigPath)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	d.cmd = cmd
+
+	// Unfortunately, cmd.Wait does not handle the case where cmd.Stdin is a writer that remains
+	// open when the process exits.  Instead, we set up our own copy loop.  This loop in fact
+	// runs forever, but for a single-use process like this, that's OK.
+	pipe, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		_, err = io.Copy(pipe, transp)
+		if err != nil {
+			// this can occur when the worker exits while we are trying to send a
+			// message to it, so we will consider the message lost and shut down
+			// as usual.
+			log.Printf("Error writing to worker process (ignored): %#v", err)
+		}
+	}()
 
 	err = cmd.Start()
 	if err != nil {
 		return nil, err
 	}
 
-	return protocol.NewNullTransport(), nil
+	return transp, nil
 }
 
 func (d *genericworker) SetProtocol(proto *protocol.Protocol) {
@@ -114,7 +136,7 @@ func (d *genericworker) Wait() error {
 	return d.cmd.Wait()
 }
 
-func New(runnercfg *runner.RunnerConfig) (worker.Worker, error) {
+func New(runnercfg *cfg.RunnerConfig) (worker.Worker, error) {
 	rv := genericworker{runnercfg, genericworkerConfig{}, nil}
 	err := runnercfg.WorkerImplementation.Unpack(&rv.wicfg)
 	if err != nil {
