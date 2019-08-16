@@ -175,6 +175,11 @@ values in the 'worker' section of the runner configuration:
 		# path where taskcluster-worker-runner should write the generated
 		# generic-worker configuration.
 		configPath: ..
+		args:
+		  - list
+		  - of
+		  - string
+		  - arguments
 
 `
 }
