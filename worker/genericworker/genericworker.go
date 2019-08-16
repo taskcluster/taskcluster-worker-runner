@@ -19,6 +19,8 @@ import (
 type genericworkerConfig struct {
 	Path       string
 	ConfigPath string
+	// should be []string
+	Args []interface{}
 }
 
 type genericworker struct {
@@ -97,11 +99,25 @@ func (d *genericworker) StartWorker(state *run.State) (protocol.Transport, error
 	transp := protocol.NewStdioTransport()
 
 	// path to generic-worker binary
-	cmd := exec.Command(d.wicfg.Path, "run", "--config", d.wicfg.ConfigPath)
+	cmd := exec.Command(d.wicfg.Path)
 	cmd.Env = os.Environ()
-	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+
+	// default args
+	if len(d.wicfg.Args) == 0 {
+		cmd.Args = append(cmd.Args, "run", "--config", d.wicfg.ConfigPath)
+	} else {
+		// convert []interface{} from yaml unmarshal to []string
+		for i := range d.wicfg.Args {
+			arg, ok := d.wicfg.Args[i].(string)
+			if !ok {
+				return nil, fmt.Errorf("Got non-string arg: %v", d.wicfg.Args)
+			}
+			cmd.Args = append(cmd.Args, arg)
+		}
+	}
+
 	d.cmd = cmd
 
 	// Unfortunately, cmd.Wait does not handle the case where cmd.Stdin is a writer that remains
