@@ -1,5 +1,7 @@
 package main
 
+// `cp` but dumb
+
 import (
 	"flag"
 	"fmt"

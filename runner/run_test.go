@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -16,16 +17,15 @@ func TestFakeGenericWorker(t *testing.T) {
 	configPath := filepath.Join(dir, "runner.yaml")
 
 	exe := "go"
-	fakeWorker := "../hack/cp.go"
-	infile := filepath.Join(dir, "infile")
+	fakeWorker := "../worker/genericworker/fake/fake.go"
 	outfile := filepath.Join(dir, "outfile")
-	testData := "this is a test"
-	err := ioutil.WriteFile(infile, []byte(testData), 0755)
-	if !assert.NoError(t, err) {
-		return
-	}
 
-	err = ioutil.WriteFile(configPath, []byte(fmt.Sprintf(`
+	// fake.go is essentially a shell `cp` command
+	// configure worker to run:
+	// `go run $fakeworker $configPath $outfile`
+	// to copy the generated config to a new file
+	// then compare, checking that Run() worked
+	configData := fmt.Sprintf(`
 provider:
   providerType: standalone
   rootURL: https://tc.example.com
@@ -44,12 +44,20 @@ worker:
     - '%s'
     - '%s'
     - '%s'
-`, configPath, exe, fakeWorker, infile, outfile)), 0755)
+`, configPath, exe, fakeWorker, configPath, outfile)
+
+	err := ioutil.WriteFile(configPath, []byte(configData), 0755)
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	_, err = Run(configPath)
+	run, err := Run(configPath)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	// matches call to MarshalIndent in genericworker
+	expectedBs, err := json.MarshalIndent(run.WorkerConfig, "", "  ")
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -59,7 +67,7 @@ worker:
 		return
 	}
 
-	assert.Equal(t, []byte(testData), bs)
+	assert.Equal(t, expectedBs, bs)
 }
 
 func TestDummy(t *testing.T) {
