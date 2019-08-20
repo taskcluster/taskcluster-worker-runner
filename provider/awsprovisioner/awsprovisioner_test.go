@@ -49,7 +49,7 @@ func TestAwsProviderGenericWorkerConfig(t *testing.T) {
 		"ed25519SigningKeyLocation": "/path/to/ed25519-key",
 	}
 
-	userDataWorkerConfig, err = userDataWorkerConfig.Set("genericWorker.config", genericWorkerConfig)
+	userDataWorkerConfig, err := userDataWorkerConfig.Set("genericWorker.config", genericWorkerConfig)
 	assert.NoError(t, err, "setting config")
 	fmt.Printf("userDataWorkerConfig: %#v", userDataWorkerConfig)
 	userData := &UserData{
