@@ -24,10 +24,6 @@ var testMetadata = map[string]string{
 
 func TestAwsProviderGenericWorkerConfig(t *testing.T) {
 	runnerWorkerConfig := cfg.NewWorkerConfig()
-	runnerWorkerConfig, err := runnerWorkerConfig.Set("from-user-data", false) // overridden
-	assert.NoError(t, err, "setting config")
-	runnerWorkerConfig, err = runnerWorkerConfig.Set("from-runner-cfg", true)
-	assert.NoError(t, err, "setting config")
 	runnercfg := &cfg.RunnerConfig{
 		Provider: cfg.ProviderConfig{
 			ProviderType: "aws-provisioner",

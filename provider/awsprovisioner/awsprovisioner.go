@@ -81,7 +81,7 @@ func (p *AwsProvisionerProvider) ConfigureRun(state *run.State) error {
 			for k, v := range configMap {
 				genericWorkerConfig, err = genericWorkerConfig.Set(k, v)
 				if err != nil {
-					return fmt.Errorf("Could not set %q to %v in %v", k, v, genericWorkerConfig)
+					return fmt.Errorf("Could not set %q to %v in `genericWorkerConfig` %#v", k, v, genericWorkerConfig)
 				}
 			}
 			state.WorkerConfig = state.WorkerConfig.Merge(genericWorkerConfig)
