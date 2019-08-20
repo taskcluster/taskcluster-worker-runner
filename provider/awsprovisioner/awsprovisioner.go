@@ -72,13 +72,13 @@ func (p *AwsProvisionerProvider) ConfigureRun(state *run.State) error {
 		// userData JSON has a genericWorker.config key
 		if err == nil {
 			// verify that genericWorker.config is a JSON object
-			maybeConfig, ok := maybeConfig.(map[string]interface{})
+			configMap, ok := maybeConfig.(map[string]interface{})
 			if !ok {
-				return fmt.Errorf("UserData key `genericWorker` must be map[string]interface{}, got %v",
+				return fmt.Errorf("UserData key `genericWorker.config` must be map[string]interface{}, got %v",
 					reflect.TypeOf(maybeConfig))
 			}
 			genericWorkerConfig := cfg.NewWorkerConfig()
-			for k, v := range maybeConfig {
+			for k, v := range configMap {
 				genericWorkerConfig, err = genericWorkerConfig.Set(k, v)
 				if err != nil {
 					return fmt.Errorf("Could not set %q to %v in %v", k, v, genericWorkerConfig)
