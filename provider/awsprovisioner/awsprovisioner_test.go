@@ -1,6 +1,7 @@
 package awsprovisioner
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -10,6 +11,72 @@ import (
 	"github.com/taskcluster/taskcluster-worker-runner/tc"
 	"github.com/taskcluster/taskcluster/clients/client-go/v16/tcawsprovisioner"
 )
+
+var testMetadata = map[string]string{
+	"/meta-data/ami-id":                      "ami-123",
+	"/meta-data/instance-id":                 "i-123",
+	"/meta-data/instance-type":               "g12.128xlarge",
+	"/meta-data/public-ipv4":                 "1.2.3.4",
+	"/meta-data/placement/availability-zone": "rgna",
+	"/meta-data/public-hostname":             "foo.ec2-dns",
+	"/meta-data/local-ipv4":                  "192.168.0.1",
+}
+
+func TestAwsProviderGenericWorkerConfig(t *testing.T) {
+	runnerWorkerConfig := cfg.NewWorkerConfig()
+	runnerWorkerConfig, err := runnerWorkerConfig.Set("from-user-data", false) // overridden
+	assert.NoError(t, err, "setting config")
+	runnerWorkerConfig, err = runnerWorkerConfig.Set("from-runner-cfg", true)
+	assert.NoError(t, err, "setting config")
+	runnercfg := &cfg.RunnerConfig{
+		Provider: cfg.ProviderConfig{
+			ProviderType: "aws-provisioner",
+		},
+		WorkerImplementation: cfg.WorkerImplementationConfig{
+			Implementation: "generic-worker",
+		},
+		WorkerConfig: runnerWorkerConfig,
+	}
+	token := tc.FakeAwsProvisionerCreateSecret(&tcawsprovisioner.SecretResponse{
+		Credentials: tcawsprovisioner.Credentials{
+			ClientID:    "cli",
+			AccessToken: "at",
+			Certificate: "cert",
+		},
+		Data:   []byte("{}"),
+		Scopes: []string{},
+	})
+
+	userDataWorkerConfig := cfg.NewWorkerConfig()
+	genericWorkerConfig := map[string]interface{}{
+		"deploymentId":              "my-deployment-id",
+		"ed25519SigningKeyLocation": "/path/to/ed25519-key",
+	}
+
+	userDataWorkerConfig, err = userDataWorkerConfig.Set("genericWorker.config", genericWorkerConfig)
+	assert.NoError(t, err, "setting config")
+	fmt.Printf("userDataWorkerConfig: %#v", userDataWorkerConfig)
+	userData := &UserData{
+		Data:               userDataWorkerConfig,
+		WorkerType:         "wt",
+		ProvisionerID:      "apv1",
+		Region:             "rgn",
+		TaskclusterRootURL: "https://tc.example.com",
+		SecurityToken:      token,
+	}
+
+	p, err := new(runnercfg, tc.FakeAwsProvisionerClientFactory, &fakeMetadataService{nil, userData, testMetadata})
+	assert.NoError(t, err, "creating provider")
+
+	state := run.State{
+		WorkerConfig: runnercfg.WorkerConfig,
+	}
+	err = p.ConfigureRun(&state)
+	assert.NoError(t, err, "ConfigureRun")
+
+	assert.Equal(t, "my-deployment-id", state.WorkerConfig.MustGet("deploymentId"), "value for deploymentId")
+	assert.Equal(t, "/path/to/ed25519-key", state.WorkerConfig.MustGet("ed25519SigningKeyLocation"), "value for ed25519SigningKeyLocation")
+}
 
 func TestAwsProviderConfigureRun(t *testing.T) {
 	runnerWorkerConfig := cfg.NewWorkerConfig()
@@ -48,18 +115,8 @@ func TestAwsProviderConfigureRun(t *testing.T) {
 		SecurityToken:      token,
 	}
 
-	metaData := map[string]string{
-		"/meta-data/ami-id":                      "ami-123",
-		"/meta-data/instance-id":                 "i-123",
-		"/meta-data/instance-type":               "g12.128xlarge",
-		"/meta-data/public-ipv4":                 "1.2.3.4",
-		"/meta-data/placement/availability-zone": "rgna",
-		"/meta-data/public-hostname":             "foo.ec2-dns",
-		"/meta-data/local-ipv4":                  "192.168.0.1",
-	}
-
-	p, err := new(runnercfg, tc.FakeAwsProvisionerClientFactory, &fakeMetadataService{nil, userData, metaData})
-	require.NoError(t, err, "creating provider")
+	p, err := new(runnercfg, tc.FakeAwsProvisionerClientFactory, &fakeMetadataService{nil, userData, testMetadata})
+	assert.NoError(t, err, "creating provider")
 
 	state := run.State{
 		WorkerConfig: runnercfg.WorkerConfig,
