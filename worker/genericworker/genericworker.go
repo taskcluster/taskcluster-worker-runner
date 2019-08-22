@@ -105,6 +105,7 @@ func (d *genericworker) StartWorker(state *run.State) (protocol.Transport, error
 	cmd.Stderr = os.Stderr
 
 	// default args
+	// helpful to override in config for testing
 	if len(d.wicfg.Args) == 0 {
 		cmd.Args = append(cmd.Args, "run", "--config", d.wicfg.ConfigPath)
 	} else {
@@ -170,11 +171,13 @@ values in the 'worker' section of the runner configuration:
 
 	worker:
 		implementation: generic-worker
-		# path to the root of the generic-worker repo clone
-		path: /path/to/generic-worker/repo
+		# path to the root of the generic-worker executable
+		path: /usr/local/bin/generic-worker
 		# path where taskcluster-worker-runner should write the generated
 		# generic-worker configuration.
-		configPath: ..
+		configPath: /etc/taskcluster/generic-worker/config.yaml
+		# args to pass to the generic-worker executable
+		# does not override the executable itself
 		args:
 		  - list
 		  - of
