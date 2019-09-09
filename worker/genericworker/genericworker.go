@@ -36,13 +36,14 @@ func (d *genericworker) ConfigureRun(state *run.State) error {
 	// generic-worker will fall back to defaults
 	for cfg, md := range map[string]string{
 		// generic-worker config : providerMetadata
-		"host":           "public-hostname",
-		"publicIp":       "public-ipv4",
-		"privateIp":      "local-ipv4",
-		"workerNodeType": "instance-type",
-		"instanceType":   "instance-type",
-		"instanceId":     "instance-id",
-		"region":         "region",
+		"host":             "public-hostname",
+		"publicIp":         "public-ipv4",
+		"privateIp":        "local-ipv4",
+		"workerNodeType":   "instance-type",
+		"instanceType":     "instance-type",
+		"instanceId":       "instance-id",
+		"region":           "region",
+		"availabilityZone": "availability-zone",
 	} {
 		v, ok := state.ProviderMetadata[md]
 		if ok {
