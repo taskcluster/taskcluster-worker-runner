@@ -34,6 +34,8 @@ func (d *genericworker) ConfigureRun(state *run.State) error {
 
 	// copy some values from the provisioner metadata, if they are set; if not,
 	// generic-worker will fall back to defaults
+
+	// are there more things that we need?
 	for cfg, md := range map[string]string{
 		// generic-worker config : providerMetadata
 		"host":             "public-hostname",
@@ -44,6 +46,7 @@ func (d *genericworker) ConfigureRun(state *run.State) error {
 		"instanceId":       "instance-id",
 		"region":           "region",
 		"availabilityZone": "availability-zone",
+		"zone":             "zone",
 	} {
 		v, ok := state.ProviderMetadata[md]
 		if ok {
