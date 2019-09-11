@@ -19,8 +19,6 @@ import (
 type genericworkerConfig struct {
 	Path       string
 	ConfigPath string
-	// should be []string
-	Args []interface{}
 }
 
 type genericworker struct {
@@ -32,7 +30,7 @@ type genericworker struct {
 func (d *genericworker) ConfigureRun(state *run.State) error {
 	var err error
 
-	// copy some values from the provisioner metadata, if they are set; if not,
+	// copy some values from the provider metadata, if they are set; if not,
 	// generic-worker will fall back to defaults
 	for cfg, md := range map[string]string{
 		// generic-worker config : providerMetadata
@@ -66,7 +64,7 @@ func (d *genericworker) ConfigureRun(state *run.State) error {
 		}
 	}
 
-	// pass all of ProviderMetadata in as workerTypeMetadata
+	// pass all of provider metadata in as workerTypeMetadata
 	state.WorkerConfig, err = state.WorkerConfig.Set("workerTypeMetadata", state.ProviderMetadata)
 	if err != nil {
 		panic(err)
@@ -115,20 +113,8 @@ func (d *genericworker) StartWorker(state *run.State) (protocol.Transport, error
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	// default args
-	// helpful to override in config for testing
-	if len(d.wicfg.Args) == 0 {
-		cmd.Args = append(cmd.Args, "run", "--config", d.wicfg.ConfigPath)
-	} else {
-		// convert []interface{} from yaml unmarshal to []string
-		for i := range d.wicfg.Args {
-			arg, ok := d.wicfg.Args[i].(string)
-			if !ok {
-				return nil, fmt.Errorf("Got non-string arg: %v", d.wicfg.Args)
-			}
-			cmd.Args = append(cmd.Args, arg)
-		}
-	}
+	// pass config to generic-worker
+	cmd.Args = append(cmd.Args, "run", "--config", d.wicfg.ConfigPath)
 
 	d.cmd = cmd
 
@@ -188,14 +174,6 @@ values in the 'worker' section of the runner configuration:
 		# path where taskcluster-worker-runner should write the generated
 		# generic-worker configuration.
 		configPath: /etc/taskcluster/generic-worker/config.yaml
-		# args to pass to the generic-worker executable
-		# does not override the executable itself
-		# by default: ["run", "--config", "<path to config>"]
-		args:
-		  - list
-		  - of
-		  - string
-		  - arguments
 
 `
 }
