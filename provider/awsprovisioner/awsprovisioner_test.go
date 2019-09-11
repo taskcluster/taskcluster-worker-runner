@@ -50,7 +50,7 @@ func TestAwsProviderGenericWorkerConfig(t *testing.T) {
 	}
 
 	userDataWorkerConfig, err := userDataWorkerConfig.Set("genericWorker.config", genericWorkerConfig)
-	assert.NoError(t, err, "setting config")
+	require.NoError(t, err, "setting config")
 	fmt.Printf("userDataWorkerConfig: %#v", userDataWorkerConfig)
 	userData := &UserData{
 		Data:               userDataWorkerConfig,
@@ -62,16 +62,16 @@ func TestAwsProviderGenericWorkerConfig(t *testing.T) {
 	}
 
 	p, err := new(runnercfg, tc.FakeAwsProvisionerClientFactory, &fakeMetadataService{nil, userData, testMetadata})
-	assert.NoError(t, err, "creating provider")
+	require.NoError(t, err, "creating provider")
 
 	state := run.State{
 		WorkerConfig: runnercfg.WorkerConfig,
 	}
 	err = p.ConfigureRun(&state)
-	assert.NoError(t, err, "ConfigureRun")
+	require.NoError(t, err, "ConfigureRun")
 
-	assert.Equal(t, "my-deployment-id", state.WorkerConfig.MustGet("deploymentId"), "value for deploymentId")
-	assert.Equal(t, "/path/to/ed25519-key", state.WorkerConfig.MustGet("ed25519SigningKeyLocation"), "value for ed25519SigningKeyLocation")
+	require.Equal(t, "my-deployment-id", state.WorkerConfig.MustGet("deploymentId"), "value for deploymentId")
+	require.Equal(t, "/path/to/ed25519-key", state.WorkerConfig.MustGet("ed25519SigningKeyLocation"), "value for ed25519SigningKeyLocation")
 }
 
 func TestAwsProviderConfigureRun(t *testing.T) {
@@ -112,7 +112,7 @@ func TestAwsProviderConfigureRun(t *testing.T) {
 	}
 
 	p, err := new(runnercfg, tc.FakeAwsProvisionerClientFactory, &fakeMetadataService{nil, userData, testMetadata})
-	assert.NoError(t, err, "creating provider")
+	require.NoError(t, err, "creating provider")
 
 	state := run.State{
 		WorkerConfig: runnercfg.WorkerConfig,
