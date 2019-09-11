@@ -287,14 +287,6 @@ values in the 'worker' section of the runner configuration:
         # path where taskcluster-worker-runner should write the generated
         # generic-worker configuration.
         configPath: /etc/taskcluster/generic-worker/config.yaml
-        # args to pass to the generic-worker executable
-        # does not override the executable itself
-        # by default: ["run", "--config", "<path to config>"]
-        args:
-          - list
-          - of
-          - string
-          - arguments
 <!-- end-usage -->
 
 # Development
