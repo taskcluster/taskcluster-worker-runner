@@ -70,7 +70,8 @@ func (d *genericworker) ConfigureRun(state *run.State) error {
 		panic(err)
 	}
 
-	workerPoolID := strings.SplitAfterN(state.WorkerPoolID, "/", 2)
+	// split to workerType and provisionerId
+	splitWorkerPoolID := strings.SplitAfterN(state.WorkerPoolID, "/", 2)
 
 	// required settings
 	// see https://github.com/taskcluster/generic-worker#set-up-your-env
@@ -78,14 +79,14 @@ func (d *genericworker) ConfigureRun(state *run.State) error {
 	set("clientId", state.Credentials.ClientID)
 	set("accessToken", state.Credentials.AccessToken)
 	set("workerId", state.WorkerID)
-	set("workerType", workerPoolID[1])
+	set("workerType", splitWorkerPoolID[1])
 
 	// optional settings
 	set("workerGroup", state.WorkerGroup)
 	if state.Credentials.Certificate != "" {
 		set("certificate", state.Credentials.Certificate)
 	}
-	set("provisionerId", workerPoolID[0][:len(workerPoolID[0])-1])
+	set("provisionerId", splitWorkerPoolID[0][:len(splitWorkerPoolID[0])-1])
 
 	return nil
 }
