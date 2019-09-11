@@ -34,16 +34,14 @@ func (d *genericworker) ConfigureRun(state *run.State) error {
 
 	// copy some values from the provisioner metadata, if they are set; if not,
 	// generic-worker will fall back to defaults
-
-	// are there more things that we need?
 	for cfg, md := range map[string]string{
 		// generic-worker config : providerMetadata
-		"host":             "public-hostname",
-		"publicIp":         "public-ipv4",
-		"privateIp":        "local-ipv4",
-		"workerNodeType":   "instance-type",
+		// required
+		"publicIp": "public-ipv4",
+		// optional
+		"privateIP":        "local-ipv4",
 		"instanceType":     "instance-type",
-		"instanceId":       "instance-id",
+		"instanceID":       "instance-id",
 		"region":           "region",
 		"availabilityZone": "availability-zone",
 		"zone":             "zone",
@@ -68,19 +66,28 @@ func (d *genericworker) ConfigureRun(state *run.State) error {
 		}
 	}
 
+	// pass all of ProviderMetadata in as workerTypeMetadata
+	state.WorkerConfig, err = state.WorkerConfig.Set("workerTypeMetadata", state.ProviderMetadata)
+	if err != nil {
+		panic(err)
+	}
+
+	workerPoolID := strings.SplitAfterN(state.WorkerPoolID, "/", 2)
+
+	// required settings
+	// see https://github.com/taskcluster/generic-worker#set-up-your-env
 	set("rootURL", state.RootURL)
 	set("clientId", state.Credentials.ClientID)
 	set("accessToken", state.Credentials.AccessToken)
+	set("workerId", state.WorkerID)
+	set("workerType", workerPoolID[1])
+
+	// optional settings
+	set("workerGroup", state.WorkerGroup)
 	if state.Credentials.Certificate != "" {
 		set("certificate", state.Credentials.Certificate)
 	}
-
-	set("workerId", state.WorkerID)
-	set("workerGroup", state.WorkerGroup)
-
-	workerPoolID := strings.SplitAfterN(state.WorkerPoolID, "/", 2)
 	set("provisionerId", workerPoolID[0][:len(workerPoolID[0])-1])
-	set("workerType", workerPoolID[1])
 
 	return nil
 }
@@ -176,12 +183,14 @@ values in the 'worker' section of the runner configuration:
 	worker:
 		implementation: generic-worker
 		# path to the root of the generic-worker executable
+		# can also be a wrapper script to which args will be passed
 		path: /usr/local/bin/generic-worker
 		# path where taskcluster-worker-runner should write the generated
 		# generic-worker configuration.
 		configPath: /etc/taskcluster/generic-worker/config.yaml
 		# args to pass to the generic-worker executable
 		# does not override the executable itself
+		# by default: ["run", "--config", "<path to config>"]
 		args:
 		  - list
 		  - of
