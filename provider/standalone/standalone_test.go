@@ -26,6 +26,11 @@ func TestConfigureRun(t *testing.T) {
 					"region": "underworld",
 					"zone":   "666",
 				},
+				"userData": map[interface{}]interface{}{
+					"dockerConfig": map[interface{}]interface{}{
+						"privileged": true,
+					},
+				},
 			},
 		},
 		WorkerImplementation: cfg.WorkerImplementationConfig{
@@ -51,6 +56,7 @@ func TestConfigureRun(t *testing.T) {
 	require.Equal(t, "wg", state.WorkerGroup, "workerGroup is correct")
 	require.Equal(t, "wi", state.WorkerID, "workerID is correct")
 	require.Equal(t, map[string]string{}, state.ProviderMetadata, "providerMetadata is correct")
+	require.Equal(t, true, state.WorkerConfig.MustGet("dockerConfig.privileged"))
 
 	require.Equal(t, true, state.WorkerConfig.MustGet("from-runner-cfg"), "value for from-runner-cfg")
 	require.Equal(t, "standalone", state.WorkerLocation["cloud"])

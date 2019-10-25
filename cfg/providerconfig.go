@@ -72,7 +72,10 @@ func (pc *ProviderConfig) Unpack(out interface{}) error {
 		destfield := destval.Field(i)
 		gotval := reflect.ValueOf(val)
 		if destfield.Type() != gotval.Type() {
-			return fmt.Errorf("Configuration value `provider.%s` should have type %s", name, destfield.Type())
+			return fmt.Errorf(
+				"Configuration value `provider.%s` should have type %s, but it has type %s",
+				name, destfield.Type(), gotval.Type(),
+			)
 		}
 		destfield.Set(gotval)
 	}

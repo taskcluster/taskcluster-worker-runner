@@ -20,6 +20,29 @@ type StandaloneProvider struct {
 	runnercfg *cfg.RunnerConfig
 }
 
+func setWorkerConfig(key string, data interface{}, wc *cfg.WorkerConfig) (*cfg.WorkerConfig, error) {
+	var err error
+
+	switch data.(type) {
+	case map[interface{}]interface{}:
+		for k, v := range data.(map[interface{}]interface{}) {
+			if wc, err = setWorkerConfig(key+"."+k.(string), v, wc); err != nil {
+				return nil, err
+			}
+		}
+	case map[string]interface{}:
+		for k, v := range data.(map[string]interface{}) {
+			if wc, err = setWorkerConfig(key+"."+k, v, wc); err != nil {
+				return nil, err
+			}
+		}
+	default:
+		wc, err = wc.Set(key, data)
+	}
+
+	return wc, err
+}
+
 func (p *StandaloneProvider) ConfigureRun(state *run.State) error {
 	var pc standaloneProviderConfig
 	err := p.runnercfg.Provider.Unpack(&pc)
@@ -45,7 +68,13 @@ func (p *StandaloneProvider) ConfigureRun(state *run.State) error {
 		}
 	}
 
-	return nil
+	state.WorkerConfig = cfg.NewWorkerConfig()
+
+	for k, v := range p.runnercfg.Provider.Data["userData"].(map[interface{}]interface{}) {
+		state.WorkerConfig, err = setWorkerConfig(k.(string), v, state.WorkerConfig)
+	}
+
+	return err
 }
 
 func (p *StandaloneProvider) UseCachedRun(run *run.State) error {
@@ -87,6 +116,10 @@ provider:
     workerID: ..
     # custom properties for TASKCLUSTER_WORKER_LOCATION
     workerLocation:  {prop: val, ..}
+    # custom worker configuration
+	userData:
+		prop: value
+		...
 ` + "```" + `
 
 The [$TASKCLUSTER_WORKER_LOCATION](https://docs.taskcluster.net/docs/reference/core/worker-manager/)

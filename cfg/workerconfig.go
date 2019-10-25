@@ -203,7 +203,7 @@ func (wc *WorkerConfig) Get(key string) (interface{}, error) {
 		}
 		val, ok = valmap[k]
 		if !ok {
-			return nil, fmt.Errorf("key not found")
+			return nil, fmt.Errorf("key '%s' not found", k)
 		}
 	}
 	return val, nil

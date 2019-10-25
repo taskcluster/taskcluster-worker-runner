@@ -208,6 +208,10 @@ provider:
     workerID: ..
     # custom properties for TASKCLUSTER_WORKER_LOCATION
     workerLocation:  {prop: val, ..}
+    # custom worker configuration
+    userData:
+        prop: value
+        ...
 ```
 
 The [$TASKCLUSTER_WORKER_LOCATION](https://docs.taskcluster.net/docs/reference/core/worker-manager/)
