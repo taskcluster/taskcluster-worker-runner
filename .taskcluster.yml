@@ -20,13 +20,7 @@ tasks:
             cd taskcluster-worker-runner &&
             git config advice.detachedHead false &&
             git checkout ${event.pull_request.head.sha} &&
-            go test -v -race ./... &&
-            go run util/update-readme.go &&
-            if ! output=$(git status --porcelain) || [ -n "$output" ]; then
-              echo "*** 'go run util/update-readme.go' produced changes to the repository; these changes should be checked in ***";
-              git --no-pager diff;
-              exit 1;
-            fi
+            go test -v -race ./...
       metadata:
         name: taskcluster-worker-runner-tests
         description: runs tests for taskcluster-worker-runner components
@@ -52,10 +46,41 @@ tasks:
             cd taskcluster-worker-runner &&
             git config advice.detachedHead false &&
             git checkout ${event.pull_request.head.sha} &&
-            golangci-lint run
+            golangci-lint run &&
+            go run util/update-readme.go &&
+            if ! output=$(git status --porcelain) || [ -n "$output" ]; then
+              echo "*** 'go run util/update-readme.go' produced changes to the repository; these changes should be checked in ***";
+              git --no-pager diff;
+              exit 1;
+            fi
       metadata:
         name: taskcluster-worker-runner-lint
         description: check lint for taskcluster-worker-runner
+        owner: taskcluster-internal@mozilla.com
+        source: ${event.repository.url}
+
+  - $if: '(tasks_for == "github-pull-request"  && event["action"] in ["opened", "reopened", "synchronize"])'
+    then:
+      taskId: {$eval: as_slugid("winbuild")}
+      created: {$fromNow: ''}
+      deadline: {$fromNow: '2 hours'}
+      provisionerId: proj-taskcluster
+      workerType: ci
+      payload:
+        maxRunTime: 3600
+        image: golang:1.12.6
+        command:
+          - /bin/bash
+          - '-c'
+          - >-
+            git clone ${event.pull_request.head.repo.git_url} taskcluster-worker-runner &&
+            cd taskcluster-worker-runner &&
+            git config advice.detachedHead false &&
+            git checkout ${event.pull_request.head.sha} &&
+            GOOS=windows GOARCH=amd64 go build ./...
+      metadata:
+        name: taskcluster-worker-runner-windows-build
+        description: perform a windows build of taskcluster-worker-runner
         owner: taskcluster-internal@mozilla.com
         source: ${event.repository.url}
 
